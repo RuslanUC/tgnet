@@ -6,6 +6,7 @@ class AuthCredentials:
     authKeyPermId: Optional[int] = None
     authKeyTemp: Optional[bytearray] = None
     authKeyTempId: Optional[int] = None
+    authKeyMediaTemp: Optional[bytearray] = None
     authKeyMediaTempId: Optional[int] = None
     authorized: int
 

@@ -34,50 +34,153 @@ class BufferWrapper:
         session.datacenters = self.datacenters()
         return session
 
+    def write_android_session(self, session: TGAndroidSession) -> None:
+        self.write_front_headers(session.headers)
+        self.write_datacenters(session.datacenters)
+
+    def write_front_headers(self, headers: Headers) -> None:
+        self.buffer.writeBytes(b"\xc0\x17\x00\x00")
+        self.buffer.writeUint32(headers.version)
+        self.buffer.writeBool(headers.testBackend)
+        if headers.version >= 3:
+            self.buffer.writeBool(headers.clientBlocked)
+        if headers.version >= 4:
+            self.buffer.writeString(headers.lastInitSystemLangcode)
+
+        self.buffer.writeBool(True)
+
+        self.buffer.writeUint32(headers.currentDatacenterId)
+        self.buffer.writeInt32(headers.timeDifference)
+        self.buffer.writeInt32(headers.lastDcUpdateTime)
+        self.buffer.writeInt64(headers.pushSessionId)
+
+        if headers.version >= 2:
+            self.buffer.writeBool(headers.registeredForInternalPush)
+        if headers.version >= 5:
+            self.buffer.writeInt32(headers.lastServerTime)
+
+        self.buffer.writeUint32(len(headers.sessionsToDestroy))
+        for i in headers.sessionsToDestroy:
+            self.buffer.writeInt64(i)
+
+    def write_datacenters(self, datacenters: list[Datacenter]) -> None:
+        self.buffer.writeUint32(len(datacenters))
+
+        for dc in datacenters:
+            self.buffer.writeUint32(dc.currentVersion)
+            self.buffer.writeUint32(dc.datacenterId)
+            if dc.currentVersion >= 3:
+                self.buffer.writeUint32(dc.lastInitVersion)
+            if dc.currentVersion >= 10:
+                self.buffer.writeUint32(dc.lastInitMediaVersion)
+
+            for i in range(4 if dc.currentVersion >= 5 else 1):
+                self.buffer.writeUint32(len(dc.ips[i]))
+                for ip in dc.ips[i]:
+                    self.buffer.writeString(ip.address)
+                    self.buffer.writeUint32(ip.port)
+                    if dc.currentVersion >= 7:
+                        self.buffer.writeInt32(ip.flags)
+                    if dc.currentVersion >= 11:
+                        self.buffer.writeString(ip.secret)
+                    elif dc.currentVersion >= 9:
+                        if ip.secret:
+                            result = ip.secret.encode('utf-8')
+                            size = len(result)
+                            output = ""
+                            for i_ in range(size):
+                                output += format(result[i_], '02x')
+                            self.buffer.writeString(output)
+
+            if dc.currentVersion >= 6:
+                self.buffer.writeBool(dc.isCdnDatacenter)
+
+            self.write_auth_credentials(dc.auth, dc)
+            self.write_salt_info(dc.salt, dc.salt13, dc)
+
+    def write_auth_credentials(self, auth: AuthCredentials, dc: Datacenter) -> None:
+        self.buffer.writeUint32(len(auth.authKeyPerm) if auth.authKeyPerm else 0)
+        if auth.authKeyPerm:
+            self.buffer.writeBytes(auth.authKeyPerm)
+
+        if dc.currentVersion >= 4:
+            self.buffer.writeInt64(auth.authKeyPermId)
+        else:
+            if auth.authKeyPermId:
+                self.buffer.writeUint32(8)
+                self.buffer.writeInt64(auth.authKeyPermId)
+            else:
+                self.buffer.writeUint32(0)
+
+        if dc.currentVersion >= 8:
+            if auth.authKeyTemp:
+                self.buffer.writeUint32(len(auth.authKeyTemp))
+                self.buffer.writeBytes(auth.authKeyTemp)
+            else:
+                self.buffer.writeUint32(0)
+            self.buffer.writeInt64(auth.authKeyTempId)
+
+        if dc.currentVersion >= 12:
+            if auth.authKeyMediaTemp:
+                self.buffer.writeUint32(len(auth.authKeyMediaTemp))
+                self.buffer.writeBytes(auth.authKeyMediaTemp)
+            else:
+                self.buffer.writeUint32(0)
+            self.buffer.writeInt64(auth.authKeyMediaTempId)
+
+        self.buffer.writeInt32(auth.authorized)
+
+    def write_salt_info(self, salts: list[Salt], salts13: list[Salt], dc: Datacenter) -> None:
+        self.buffer.writeUint32(len(salts))
+        for salt in salts:
+            self.buffer.writeInt32(salt.salt_valid_since)
+            self.buffer.writeInt32(salt.salt_valid_until)
+            self.buffer.writeInt64(salt.salt)
+
+        if dc.currentVersion >= 13:
+            self.buffer.writeUint32(len(salts13))
+            for salt in salts13:
+                self.buffer.writeInt32(salt.salt_valid_since)
+                self.buffer.writeInt32(salt.salt_valid_until)
+                self.buffer.writeInt64(salt.salt)
+
     def front_headers(self) -> Headers:
         headers = Headers()
         self.buffer.readBytes(4)
         if self.buffer is not None:
-            version = self.buffer.readUint32(None)
+            version = self.buffer.readUint32()
             headers.version = version
 
             if version <= self._CONFIG_VERSION:
-                testBackend = self.buffer.readBool(None)
-                headers.testBackend = testBackend
+                headers.testBackend = self.buffer.readBool()
                 if version >= 3:
-                    clientBlocked = self.buffer.readBool(None)
-                    headers.clientBlocked = clientBlocked
+                    headers.clientBlocked = self.buffer.readBool()
                 if version >= 4:
-                    lastInitSystemLangcode = self.buffer.readString(None)
-                    headers.lastInitSystemLangcode = lastInitSystemLangcode
+                    headers.lastInitSystemLangcode = self.buffer.readString()
 
                 if self.buffer.readBool():
-                    currentDatacenterId = self.buffer.readUint32(None)
-                    timeDifference = self.buffer.readInt32(None)
-                    lastDcUpdateTime = self.buffer.readInt32(None)
-                    pushSessionId = self.buffer.readInt64(None)
-
-                    headers.currentDatacenterId = currentDatacenterId
-                    headers.timeDifference = timeDifference
-                    headers.lastDcUpdateTime = lastDcUpdateTime
-                    headers.pushSessionId = pushSessionId
+                    headers.currentDatacenterId = self.buffer.readUint32()
+                    headers.timeDifference = self.buffer.readInt32()
+                    headers.lastDcUpdateTime = self.buffer.readInt32()
+                    headers.pushSessionId = self.buffer.readInt64()
 
                     if version >= 2:
-                        registeredForInternalPush = self.buffer.readBool(None)
+                        registeredForInternalPush = self.buffer.readBool()
                         headers.registeredForInternalPush = registeredForInternalPush
                     if version >= 5:
-                        lastServerTime = self.buffer.readInt32(None)
+                        lastServerTime = self.buffer.readInt32()
                         currentTime = self._get_current_time()
 
                         headers.lastServerTime = lastServerTime
                         headers.currentTime = currentTime
 
-                        if currentTime > timeDifference and currentTime < lastServerTime:
-                            timeDifference += (lastServerTime - currentTime)
+                        if headers.timeDifference < currentTime < lastServerTime:
+                            headers.timeDifference += (lastServerTime - currentTime)
 
-                    count = self.buffer.readUint32(None)
+                    headers.sessionsToDestroy = []
+                    count = self.buffer.readUint32()
                     for a in range(count):
-                        self.buffer.readInt64(None)
+                        headers.sessionsToDestroy.append(self.buffer.readInt64())
         return headers
 
     def get_ip(self, ip_type: Literal['addressesIpv4', 'addressesIpv6', 'addressesIpv4Download', 'addressesIpv6Download']) -> IP:
@@ -85,7 +188,7 @@ class BufferWrapper:
         ip.type_ = ip_type
 
         address = self.buffer.readString()
-        port = self.buffer.readInt32()
+        port = self.buffer.readUint32()
         ip.address = address
         ip.port = port
 
@@ -96,8 +199,7 @@ class BufferWrapper:
         ip.flags = flags
 
         if self.currentVersion >= 11:
-            secret = self.buffer.readString()
-            ip.secret = secret
+            ip.secret = self.buffer.readString()
 
         elif self.currentVersion >= 9:
             secret = self.buffer.readString()
@@ -111,27 +213,23 @@ class BufferWrapper:
 
         return ip
 
-    def datacenters(self) -> list[Datacenter]:
+    def datacenters(self):
         datacenters = []
-        numOfDatacenters = self.buffer.readInt32()
+        numOfDatacenters = self.buffer.readUint32()
 
         for i in range(numOfDatacenters):
             datacenter = Datacenter()
 
-            currentVersion = self.buffer.readInt32()
-            datacenter.currentVersion = currentVersion
-            self.currentVersion = currentVersion
-            datacenterId = self.buffer.readInt32()
-            datacenter.datacenterId = datacenterId
+            self.currentVersion = datacenter.currentVersion = self.buffer.readUint32()
+            datacenter.datacenterId = self.buffer.readUint32()
 
-            lastInitVersion = self.buffer.readInt32()
-            datacenter.lastInitVersion = lastInitVersion
+            if datacenter.currentVersion >= 3:
+                datacenter.lastInitVersion = self.buffer.readUint32()
 
-            if currentVersion > 10:
-                lastInitMediaVersion = self.buffer.readInt32()
-                datacenter.lastInitMediaVersion = lastInitMediaVersion
+            if datacenter.currentVersion >= 10:
+                datacenter.lastInitMediaVersion = self.buffer.readUint32()
 
-            count = 4 if currentVersion >= 5 else 1
+            count = 4 if datacenter.currentVersion >= 5 else 1
 
             for b in range(count):
                 array = None
@@ -147,33 +245,33 @@ class BufferWrapper:
                 if array is None:
                     continue
 
-                ips = self.buffer.readInt32()
-
+                ips = self.buffer.readUint32()
+                ips_ = []
                 for ip_index in range(ips):
                     ip = self.get_ip(array)
-                    datacenter.ips.append(ip)
+                    ips_.append(ip)
 
-            if currentVersion >= 6:
-                isCdnDatacenter = self.buffer.readBool()
-                datacenter.isCdnDatacenter = isCdnDatacenter
+                datacenter.ips.append(ips_)
+
+            if datacenter.currentVersion >= 6:
+                datacenter.isCdnDatacenter = self.buffer.readBool()
 
             auth_credentials = self.auth_credentials()
             datacenter.auth = auth_credentials
 
-            datacenter.salt = self.salt_info()
+            datacenter.salt, datacenter.salt13 = self.salt_info()
             datacenters.append(datacenter)
 
         return datacenters
 
     def auth_credentials(self) -> AuthCredentials:
         auth = AuthCredentials()
-        len_of_bytes = self.buffer.readInt32()
+        len_of_bytes = self.buffer.readUint32()
         if len_of_bytes != 0:
             auth.authKeyPerm = self.buffer.readBytes(len_of_bytes)
 
         if self.currentVersion >= 4:
             auth.authKeyPermId = self.buffer.readInt64()
-
         else:
             len_of_bytes = self.buffer.readUint32()
             if len_of_bytes != 0:
@@ -186,7 +284,7 @@ class BufferWrapper:
             auth.authKeyTempId = self.buffer.readInt64()
 
         if self.currentVersion >= 12:
-            len_of_bytes = self.buffer.readInt32()
+            len_of_bytes = self.buffer.readUint32()
             if len_of_bytes != 0:
                 auth.authKeyMediaTemp = self.buffer.readBytes(len_of_bytes)
             auth.authKeyMediaTempId = self.buffer.readInt64()
@@ -195,9 +293,10 @@ class BufferWrapper:
 
         return auth
 
-    def salt_info(self) -> list[Salt]:
+    def salt_info(self):
         salts = []
-        bytes_len = self.buffer.readInt32()
+        salts13 = []
+        bytes_len = self.buffer.readUint32()
         for x in range(bytes_len):
             salt = Salt()
             salt.salt_valid_since = self.buffer.readInt32()
@@ -206,12 +305,12 @@ class BufferWrapper:
             salts.append(salt)
 
         if self.currentVersion >= 13:
-            bytes_len = self.buffer.readInt32()
+            bytes_len = self.buffer.readUint32()
             for x in range(bytes_len):
                 salt = Salt()
                 salt.salt_valid_since = self.buffer.readInt32()
                 salt.salt_valid_until = self.buffer.readInt32()
                 salt.salt = self.buffer.readInt64()
-                salts.append(salt)
+                salts13.append(salt)
 
-        return salts
+        return salts, salts13

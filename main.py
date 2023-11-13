@@ -22,5 +22,12 @@ with open(tgnet_path, 'rb') as f:
 
 tgdata = buffer.get_tg_android_session()
 valid_session = tgdata.datacenters[tgdata.headers.currentDatacenterId-1]
-print('auth key:', valid_session.auth.authKeyPerm)
-print('telethon string session:', valid_session.telethon_string_session)
+print(f"dc: {tgdata.headers.currentDatacenterId}")
+print('auth key:', valid_session.auth.authKeyPerm.hex())
+
+tgnet_path = 'tgnets/tgnet2.dat'
+with open(tgnet_path, 'wb') as f:
+    buf = BufferWrapper(b"\x00"*len(buffer.buffer.buffer))
+    buf.write_android_session(tgdata)
+    f.write(buf.buffer.buffer)
+#print('telethon string session:', valid_session.telethon_string_session)

@@ -10,3 +10,4 @@ class Headers:
     registeredForInternalPush: bool
     lastServerTime: int
     currentTime: int
+    sessionsToDestroy: list[int]
