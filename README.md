@@ -1,12 +1,24 @@
-# telegram_android_session_converter
-Converts Android's telegram session into telethon / pyrogram session, also can be used to exctract AuthKey from Android's session
+# tgnet
+Deserializes/serializes Telegram tgnet.dat format.
+Can be used to extract/replace authKey and dcId.
 
-# There are no currently working analogues on the internet.
-##### The software can be used to convert mobile android sessions to any other type of session (pyrogram, telethon, TDATA etc.) or just to extract auth key from the session
+#### This is fork of [batreller/telegram_android_session_converter](https://github.com/batreller/telegram_android_session_converter) with support of serialization and zero dependencies.
+#### To convert the session all you need is just tgnet.dat file from the root directory of your telegram app on the phone, it's located at /data/data/org.telegram.messenger.web (or another package name, if you're using an unofficial client), it can be extracted using ADB (Android Debug Bridge).
 
-##### To convert the session all you need is just tgnet.dat file from the root directory of your telegram app on the phone, it's located at data/data/org.telegram.messenger.web, it ca be extracted using ADB (Android Debug Bridge)
+## Usage
+```python
+>>> from tgnet import TGAndroidSession, NativeByteBuffer
+>>> with open("tgnet.dat", "rb") as f:
+...     buf = NativeByteBuffer(f)
+...     tgdata = TGAndroidSession.deserialize(buf)
+...
+>>> currentDcId = tgdata.headers.currentDatacenterId
+>>> currentDc = tgdata.datacenters[currentDcId - 1]
+>>> print(currentDc.auth.authKeyPerm.hex())
+'72a9808fb4a9e51e6ca57259714c14fa83546fc9d56fcb9d7de77c59fa13b6d6...'
+```
 
-##### You can download example file just for tests here: https://drive.google.com/file/d/13xy2EQ_F1ScdFQNONqLoWwbY-ltOk8HF/view?usp=sharing
-###### ps. the software will work and will return you the string session and auth key of that session, but as that session is public, it may already be invalid
-
-Technically it is a copy of [Telegram's class NativeByteBuffer](https://github.com/DrKLO/Telegram/blob/master/TMessagesProj/jni/tgnet/NativeByteBuffer.cpp)
+### Running tests
+```shell
+pytest -s -x --disable-warnings --cov=tgnet/ test.py
+```

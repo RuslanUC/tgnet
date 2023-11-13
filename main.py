@@ -1,33 +1,16 @@
-"""
-Telegram android session auth key scrapper
-
-This is a code that scrap all data (auth_key, datacenter_id etc.) from tgnet.dat file
-tgnet.dat is telegram's session file on android
-
-There are 4 locations of this file:
-/data/data/org.telegram.messenger.web/files/tgnet.dat
-/data/data/org.telegram.messenger.web/files/account1/tgnet.dat
-/data/data/org.telegram.messenger.web/files/account2/tgnet.dat
-/data/data/org.telegram.messenger.web/files/account3/tgnet.dat
-
-Creator https://github.com/batreller/
-Code https://github.com/batreller/telegram_android_session_converter
-"""
-
-from BufferWrapper import BufferWrapper
+from tgnet import NativeByteBuffer, TGAndroidSession
 
 tgnet_path = 'tgnets/tgnet.dat'
 with open(tgnet_path, 'rb') as f:
-    buffer = BufferWrapper(f.read())
+    buf = NativeByteBuffer(f)
+    tgdata = TGAndroidSession.deserialize(buf)
 
-tgdata = buffer.get_tg_android_session()
 valid_session = tgdata.datacenters[tgdata.headers.currentDatacenterId-1]
+
 print(f"dc: {tgdata.headers.currentDatacenterId}")
 print('auth key:', valid_session.auth.authKeyPerm.hex())
 
-tgnet_path = 'tgnets/tgnet2.dat'
-with open(tgnet_path, 'wb') as f:
-    buf = BufferWrapper(b"\x00"*len(buffer.buffer.buffer))
-    buf.write_android_session(tgdata)
-    f.write(buf.buffer.buffer)
-#print('telethon string session:', valid_session.telethon_string_session)
+# Uncomment lines below if you want to write tgnet back to file
+#with open('tgnets/tgnet_serialized.dat', 'wb') as f:
+#    buf = NativeByteBuffer(f)
+#    tgdata.serialize(buf)
