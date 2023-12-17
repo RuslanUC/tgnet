@@ -24,8 +24,6 @@ class Headers:
 
     @classmethod
     def deserialize(cls, buffer: NativeByteBuffer) -> Headers:
-        buffer.readBytes(4)
-
         version = buffer.readUint32()
         if version > 99999:
             raise NotImplementedError(f"Deserializing this version of config ({version}) is not currently supported")
@@ -56,13 +54,11 @@ class Headers:
         for a in range(count):
             sessionsToDestroy.append(buffer.readInt64())
 
-        return cls(version, testBackend, clientBlocked, lastInitSystemLangCode, full,
-                   currentDatacenterId, timeDifference, lastDcUpdateTime, pushSessionId, registeredForInternalPush,
-                   lastServerTime, currentTime, sessionsToDestroy)
+        return cls(version, testBackend, clientBlocked, lastInitSystemLangCode, full, currentDatacenterId,
+                   timeDifference, lastDcUpdateTime, pushSessionId, registeredForInternalPush, lastServerTime,
+                   currentTime, sessionsToDestroy)
 
     def serialize(self, buffer: NativeByteBuffer) -> None:
-        buffer.writeBytes(b"\xc0\x17\x00\x00")
-
         buffer.writeUint32(self.version)
         buffer.writeBool(self.testBackend)
         if self.version >= 3:

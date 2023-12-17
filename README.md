@@ -13,7 +13,7 @@ Can be used to extract/replace authKey and dcId.
 ...     tgdata = TGAndroidSession.deserialize(buf)
 ...
 >>> currentDcId = tgdata.headers.currentDatacenterId
->>> currentDc = tgdata.datacenters[currentDcId - 1]
+>>> currentDc = tgdata.datacenters[currentDcId - 1]  # or tgdata.currentDc()
 >>> print(currentDc.auth.authKeyPerm.hex())
 '72a9808fb4a9e51e6ca57259714c14fa83546fc9d56fcb9d7de77c59fa13b6d6...'
 ```

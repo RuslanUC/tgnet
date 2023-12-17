@@ -20,8 +20,8 @@ class Datacenter:
     isCdnDatacenter: bool
 
     auth: AuthCredentials
-    salt: list[Salt]
-    salt13: list[Salt]
+    salts: list[Salt]
+    saltsMedia: list[Salt]
 
     @classmethod
     def deserialize(cls, buffer: NativeByteBuffer) -> Datacenter:
@@ -44,15 +44,15 @@ class Datacenter:
         auth = AuthCredentials.deserialize(buffer, currentVersion)
 
         salt_count = buffer.readUint32()
-        salt = [Salt.deserialize(buffer) for _ in range(salt_count)]
-        salt13 = None
+        salts = [Salt.deserialize(buffer) for _ in range(salt_count)]
+        saltsMedia = None
 
         if currentVersion >= 13:
             salt_count = buffer.readUint32()
-            salt13 = [Salt.deserialize(buffer) for _ in range(salt_count)]
+            saltsMedia = [Salt.deserialize(buffer) for _ in range(salt_count)]
 
         return cls(currentVersion, datacenterId, lastInitVersion, lastInitMediaVersion, ips, isCdnDatacenter, auth,
-                   salt, salt13)
+                   salts, saltsMedia)
 
     def serialize(self, buffer: NativeByteBuffer) -> None:
         buffer.writeUint32(self.currentVersion)
@@ -72,11 +72,11 @@ class Datacenter:
 
         self.auth.serialize(buffer, self.currentVersion)
 
-        buffer.writeUint32(len(self.salt))
-        for salt in self.salt:
+        buffer.writeUint32(len(self.salts))
+        for salt in self.salts:
             salt.serialize(buffer)
 
         if self.currentVersion >= 13:
-            buffer.writeUint32(len(self.salt13))
-            for salt in self.salt13:
+            buffer.writeUint32(len(self.saltsMedia))
+            for salt in self.saltsMedia:
                 salt.serialize(buffer)
