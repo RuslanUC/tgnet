@@ -3,10 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from tgnet.models.auth import AuthCredentials
-from tgnet.models.ip import IP
-from tgnet.models.salt import Salt
-from tgnet.native_byte_buffer import NativeByteBuffer
+from tgnet.low.auth import AuthCredentials
+from tgnet.low.ip import IP
+from tgnet.low.salt import Salt
+from tgnet.low.tgnet_reader import TgnetReader
 
 
 @dataclass
@@ -20,11 +20,11 @@ class Datacenter:
     isCdnDatacenter: bool
 
     auth: AuthCredentials
-    salts: list[Salt]
-    saltsMedia: list[Salt]
+    salt: list[Salt]
+    saltMedia: list[Salt]
 
     @classmethod
-    def deserialize(cls, buffer: NativeByteBuffer) -> Datacenter:
+    def deserialize(cls, buffer: TgnetReader) -> Datacenter:
         currentVersion = buffer.readUint32()
         datacenterId = buffer.readUint32()
 
@@ -44,17 +44,19 @@ class Datacenter:
         auth = AuthCredentials.deserialize(buffer, currentVersion)
 
         salt_count = buffer.readUint32()
-        salts = [Salt.deserialize(buffer) for _ in range(salt_count)]
-        saltsMedia = None
+        salt = [Salt.deserialize(buffer) for _ in range(salt_count)]
+        saltMedia = None
 
         if currentVersion >= 13:
             salt_count = buffer.readUint32()
-            saltsMedia = [Salt.deserialize(buffer) for _ in range(salt_count)]
+            saltMedia = [Salt.deserialize(buffer) for _ in range(salt_count)]
 
-        return cls(currentVersion, datacenterId, lastInitVersion, lastInitMediaVersion, ips, isCdnDatacenter, auth,
-                   salts, saltsMedia)
+        return cls(
+            currentVersion, datacenterId, lastInitVersion, lastInitMediaVersion, ips, isCdnDatacenter, auth,
+            salt, saltMedia,
+        )
 
-    def serialize(self, buffer: NativeByteBuffer) -> None:
+    def serialize(self, buffer: TgnetReader) -> None:
         buffer.writeUint32(self.currentVersion)
         buffer.writeUint32(self.datacenterId)
         if self.currentVersion >= 3:
@@ -72,11 +74,11 @@ class Datacenter:
 
         self.auth.serialize(buffer, self.currentVersion)
 
-        buffer.writeUint32(len(self.salts))
-        for salt in self.salts:
+        buffer.writeUint32(len(self.salt))
+        for salt in self.salt:
             salt.serialize(buffer)
 
         if self.currentVersion >= 13:
-            buffer.writeUint32(len(self.saltsMedia))
-            for salt in self.saltsMedia:
+            buffer.writeUint32(len(self.saltMedia))
+            for salt in self.saltMedia:
                 salt.serialize(buffer)

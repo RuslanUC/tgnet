@@ -1,10 +1,11 @@
 import struct
 from io import BytesIO
+from os import PathLike
 from typing import Optional, Union, BinaryIO
 
 
-class NativeByteBuffer:
-    def __init__(self, bytes_: Union[bytes, bytearray, BinaryIO]):
+class TgnetReader:
+    def __init__(self, bytes_: Union[bytes, bytearray, str, PathLike, BinaryIO]):
         self.buffer = BytesIO(bytes_) if isinstance(bytes_, (bytes, bytearray)) else bytes_
 
     def writeByteArray(self, b: bytes) -> None:

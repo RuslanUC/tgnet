@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from time import time
 
-from tgnet.native_byte_buffer import NativeByteBuffer
+from tgnet.low.tgnet_reader import TgnetReader
 
 
 @dataclass
@@ -23,7 +23,7 @@ class Headers:
     sessionsToDestroy: list[int] = None
 
     @classmethod
-    def deserialize(cls, buffer: NativeByteBuffer) -> Headers:
+    def deserialize(cls, buffer: TgnetReader) -> Headers:
         version = buffer.readUint32()
         if version > 99999:
             raise NotImplementedError(f"Deserializing this version of config ({version}) is not currently supported")
@@ -58,7 +58,7 @@ class Headers:
                    timeDifference, lastDcUpdateTime, pushSessionId, registeredForInternalPush, lastServerTime,
                    currentTime, sessionsToDestroy)
 
-    def serialize(self, buffer: NativeByteBuffer) -> None:
+    def serialize(self, buffer: TgnetReader) -> None:
         buffer.writeUint32(self.version)
         buffer.writeBool(self.testBackend)
         if self.version >= 3:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from tgnet.native_byte_buffer import NativeByteBuffer
+from tgnet.low.tgnet_reader import TgnetReader
 
 
 @dataclass
@@ -13,7 +13,7 @@ class IP:
     secret: str
 
     @classmethod
-    def deserialize(cls, buffer: NativeByteBuffer, version: int) -> IP:
+    def deserialize(cls, buffer: TgnetReader, version: int) -> IP:
         address = buffer.readString()
         port = buffer.readUint32()
         flags = buffer.readInt32() if version >= 7 else 0
@@ -32,7 +32,7 @@ class IP:
 
         return cls(address, port, flags, secret)
 
-    def serialize(self, buffer: NativeByteBuffer, version: int) -> None:
+    def serialize(self, buffer: TgnetReader, version: int) -> None:
         buffer.writeString(self.address)
         buffer.writeUint32(self.port)
         buffer.writeInt32(self.flags)

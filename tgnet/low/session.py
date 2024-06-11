@@ -1,20 +1,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
-from tgnet.models.datacenter import Datacenter
-from tgnet.models.headers import Headers
-from tgnet.native_byte_buffer import NativeByteBuffer
+from tgnet.low.datacenter import Datacenter
+from tgnet.low.headers import Headers
+from tgnet.low.tgnet_reader import TgnetReader
 
 
 @dataclass
-class TGAndroidSession:
+class TgnetSession:
     headers: Headers
     datacenters: list[Datacenter]
 
     @classmethod
-    def deserialize(cls, buffer: NativeByteBuffer) -> TGAndroidSession:
+    def deserialize(cls, buffer: TgnetReader) -> TgnetSession:
         buffer.readUint32()  # config size (file size minus 4), not used now
 
         headers = Headers.deserialize(buffer)
@@ -26,7 +25,7 @@ class TGAndroidSession:
 
         return cls(headers, datacenters)
 
-    def serialize(self, buffer: NativeByteBuffer) -> None:
+    def serialize(self, buffer: TgnetReader) -> None:
         start_size = buffer.buffer.tell()
         buffer.writeUint32(0)
 
@@ -39,10 +38,3 @@ class TGAndroidSession:
         config_size = buffer.buffer.tell() - start_size
         buffer.buffer.seek(start_size)
         buffer.writeUint32(config_size - 4)
-
-    def currentDc(self) -> Optional[Datacenter]:
-        if (self.headers is None or not self.headers.full or not self.datacenters or
-                self.headers.currentDatacenterId == 0):
-            return
-
-        return self.datacenters[self.headers.currentDatacenterId]

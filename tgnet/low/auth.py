@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from tgnet.native_byte_buffer import NativeByteBuffer
+from tgnet.low.tgnet_reader import TgnetReader
 
 
 @dataclass
@@ -17,7 +17,7 @@ class AuthCredentials:
     authorized: int
 
     @classmethod
-    def deserialize(cls, buffer: NativeByteBuffer, version: int) -> AuthCredentials:
+    def deserialize(cls, buffer: TgnetReader, version: int) -> AuthCredentials:
         authKeyPerm = None
         authKeyPermId = None
         authKeyTemp = None
@@ -53,7 +53,7 @@ class AuthCredentials:
         return cls(authKeyPerm, authKeyPermId, authKeyTemp, authKeyTempId, authKeyMediaTemp, authKeyMediaTempId,
                    authorized)
 
-    def serialize(self, buffer: NativeByteBuffer, version: int) -> None:
+    def serialize(self, buffer: TgnetReader, version: int) -> None:
         buffer.writeUint32(len(self.authKeyPerm) if self.authKeyPerm else 0)
         if self.authKeyPerm:
             buffer.writeBytes(self.authKeyPerm)
