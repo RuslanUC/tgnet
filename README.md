@@ -7,15 +7,19 @@ Can be used to extract/replace authKey and dcId.
 
 ## Usage
 ```python
->>> from tgnet import TGAndroidSession, NativeByteBuffer
->>> with open("tgnet.dat", "rb") as f:
-...     buf = NativeByteBuffer(f)
-...     tgdata = TGAndroidSession.deserialize(buf)
-...
->>> currentDcId = tgdata.headers.currentDatacenterId
->>> currentDc = tgdata.datacenters[currentDcId - 1]  # or tgdata.currentDc()
->>> print(currentDc.auth.authKeyPerm.hex())
-'72a9808fb4a9e51e6ca57259714c14fa83546fc9d56fcb9d7de77c59fa13b6d6...'
+from tgnet import Tgnet
+
+tgnet_path = input("tgnet.dat path: ")
+
+tgnet = Tgnet(tgnet_path)
+current_dc = tgnet.current_datacenter
+auth_key = current_dc.get_auth_key("perm")
+
+print(f"Current dc id: {current_dc.id}")
+print(f"Auth key (hex): {auth_key.hex() if auth_key is not None else None}")
+
+# Current dc id: 2
+# Auth key (hex): '72a9808fb4a9e51e6ca57259714c14fa83546fc9d56fcb9d7de77c59fa13b6d6...'
 ```
 
 ### Running tests
