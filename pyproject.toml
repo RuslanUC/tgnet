@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tgnet"
-version = "0.2.0a1"
+version = "0.2.1"
 description = "Deserializes/serializes Telegram tgnet.dat format. Can be used to extract/replace authKey and dcId."
 authors = ["RuslanUC <dev_ruslan_uc@protonmail.com>", "batreller <batreller@gmail.com>"]
 readme = "README.md"
