@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
-from tgnet.low.auth import AuthCredentials
-from tgnet.low.ip import IP
-from tgnet.low.salt import Salt
-from tgnet.low.tgnet_reader import TgnetReader
+from tgnet.raw.auth import AuthCredentials
+from tgnet.raw.ip import IP
+from tgnet.raw.salt import Salt
+from tgnet.raw.tgnet_reader import TgnetReader
 
 
 @dataclass
@@ -14,7 +13,7 @@ class Datacenter:
     currentVersion: int
     datacenterId: int
     lastInitVersion: int
-    lastInitMediaVersion: Optional[int]
+    lastInitMediaVersion: int | None
 
     ips: list[list[IP]]
     isCdnDatacenter: bool

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from tgnet.low.tgnet_reader import TgnetReader
+from tgnet.raw.tgnet_reader import TgnetReader
 
 
 @dataclass

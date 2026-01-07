@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from tgnet.low.datacenter import Datacenter
-from tgnet.low.headers import Headers
-from tgnet.low.tgnet_reader import TgnetReader
+from tgnet.raw.datacenter import Datacenter
+from tgnet.raw.headers import Headers
+from tgnet.raw.tgnet_reader import TgnetReader
 
 
 @dataclass

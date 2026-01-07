@@ -1,11 +1,11 @@
 import struct
 from io import BytesIO
 from os import PathLike
-from typing import Optional, Union, BinaryIO
+from typing import BinaryIO
 
 
 class TgnetReader:
-    def __init__(self, bytes_: Union[bytes, bytearray, str, PathLike, BinaryIO]):
+    def __init__(self, bytes_: bytes | bytearray | str | PathLike | BinaryIO):
         self.buffer = BytesIO(bytes_) if isinstance(bytes_, (bytes, bytearray)) else bytes_
 
     def writeByteArray(self, b: bytes) -> None:
@@ -65,7 +65,7 @@ class TgnetReader:
         # bytearray(b'7\x97y\xbc') for False
         return constructor == bytearray(b'\xb5ur\x99')
 
-    def readBytes(self, length: int) -> Optional[bytes]:
+    def readBytes(self, length: int) -> bytes | None:
         return self.buffer.read(length)
 
     def readString(self) -> str:

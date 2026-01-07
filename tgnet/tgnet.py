@@ -1,10 +1,10 @@
 from __future__ import annotations
 from io import BytesIO
 from os import PathLike
-from typing import BinaryIO, Union, Optional, Literal
+from typing import BinaryIO,Literal
 
 from tgnet import Headers, IP, AuthCredentials
-from tgnet.low import TgnetSession, TgnetReader, Datacenter as LowDatacenter
+from tgnet.raw import TgnetSession, TgnetReader, Datacenter as LowDatacenter
 from tgnet.utils import calcKeyId
 
 AuthKeyType = Literal["perm", "temp", "media"]
@@ -32,7 +32,7 @@ class Datacenter:
 
         return self._dc
 
-    def set_auth_key(self, key: Optional[bytes], type_: AuthKeyType = "perm") -> None:
+    def set_auth_key(self, key: bytes | None, type_: AuthKeyType = "perm") -> None:
         """
         Used to set the authentication key for the datacenter.
 
@@ -64,7 +64,7 @@ class Datacenter:
                 f"Invalid auth key type provided. Expected one of (\"perm\", \"temp\", \"media\"), got {type_}."
             )
 
-    def get_auth_key(self, type_: AuthKeyType) -> Optional[bytes]:
+    def get_auth_key(self, type_: AuthKeyType) -> bytes | None:
         """
         Used to set the authentication key for the datacenter.
 
@@ -112,8 +112,11 @@ class Datacenter:
 class Tgnet:
     __slots__ = ("_session", "_datacenters")
 
-    def __init__(self, file: Optional[Union[bytes, bytearray, str, PathLike, BinaryIO]] = None,
-                 session: Optional[TgnetSession] = None):
+    def __init__(
+            self,
+            file: bytes | bytearray | str | PathLike | BinaryIO | None = None,
+            session: TgnetSession | None = None,
+    ) -> None:
         if file is None and session is None:
             raise ValueError(f"You need to pass either \"file\" or \"session\" to {self.__class__.__name__}.")
 
@@ -133,7 +136,7 @@ class Tgnet:
         self._session = session
         self._datacenters = [Datacenter(dc) for dc in self._session.datacenters]
 
-    def get_datacenter(self, dc: int) -> Optional[Datacenter]:
+    def get_datacenter(self, dc: int) -> Datacenter | None:
         """
         Retrieves the datacenter with the provided dcId.
 
@@ -142,12 +145,12 @@ class Tgnet:
         """
 
         if dc > len(self._datacenters) or dc < 0:
-            return
+            return None
 
         return self._datacenters[dc - 1]
 
     @property
-    def current_datacenter(self) -> Optional[Datacenter]:
+    def current_datacenter(self) -> Datacenter | None:
         """
         Retrieves the current datacenter.
 
@@ -156,12 +159,12 @@ class Tgnet:
 
         if (self._session.headers is None or not self._session.headers.full or not self._session.datacenters or
                 self._session.headers.currentDatacenterId == 0):
-            return
+            return None
 
         return self.get_datacenter(self._session.headers.currentDatacenterId)
 
     @property
-    def auth_key(self) -> Optional[bytes]:
+    def auth_key(self) -> bytes | None:
         """
         Retrieves the auth key for the current datacenter.
 
@@ -169,10 +172,10 @@ class Tgnet:
         """
 
         if not (dc := self.current_datacenter):
-            return
+            return None
         return dc.get_auth_key("perm")
 
-    def set_auth_key(self, dc: int, key: Optional[bytes], type_: Literal["perm", "temp", "media"] = "perm") -> None:
+    def set_auth_key(self, dc: int, key: bytes | None, type_: Literal["perm", "temp", "media"] = "perm") -> None:
         """
         Sets the authentication key for the datacenter.
 
@@ -238,7 +241,7 @@ class Tgnet:
         headers.currentTime = 0
         headers.sessionsToDestroy = []
 
-    def save(self, file: Union[str, PathLike, BinaryIO]) -> None:
+    def save(self, file: str | PathLike | BinaryIO) -> None:
         """
         Saves tgnet session to a file.
 

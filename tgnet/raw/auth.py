@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
-from tgnet.low.tgnet_reader import TgnetReader
+from tgnet.raw.tgnet_reader import TgnetReader
 
 
 @dataclass
 class AuthCredentials:
-    authKeyPerm: Optional[bytes]
-    authKeyPermId: Optional[int]
-    authKeyTemp: Optional[bytes]
-    authKeyTempId: Optional[int]
-    authKeyMediaTemp: Optional[bytes]
-    authKeyMediaTempId: Optional[int]
+    authKeyPerm: bytes | None
+    authKeyPermId: int | None
+    authKeyTemp: bytes | None
+    authKeyTempId: int | None
+    authKeyMediaTemp: bytes | None
+    authKeyMediaTempId: int | None
     authorized: int
 
     @classmethod

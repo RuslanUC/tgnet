@@ -1,2 +1,2 @@
-from .low import *
+from .raw import *
 from .tgnet import Tgnet

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from time import time
 
-from tgnet.low.tgnet_reader import TgnetReader
+from tgnet.raw.tgnet_reader import TgnetReader
 
 
 @dataclass
@@ -13,14 +13,14 @@ class Headers:
     clientBlocked: bool
     lastInitSystemLangCode: str
     full: bool
-    currentDatacenterId: int = None
-    timeDifference: int = None
-    lastDcUpdateTime: int = None
-    pushSessionId: int = None
-    registeredForInternalPush: bool = None
-    lastServerTime: int = None
-    currentTime: int = None
-    sessionsToDestroy: list[int] = None
+    currentDatacenterId: int | None = None
+    timeDifference: int | None = None
+    lastDcUpdateTime: int | None = None
+    pushSessionId: int | None = None
+    registeredForInternalPush: bool | None = None
+    lastServerTime: int | None = None
+    currentTime: int | None = None
+    sessionsToDestroy: list[int] | None = None
 
     @classmethod
     def deserialize(cls, buffer: TgnetReader) -> Headers:

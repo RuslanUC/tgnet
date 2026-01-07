@@ -6,7 +6,7 @@ authors = ["RuslanUC <dev_ruslan_uc@protonmail.com>", "batreller <batreller@gmai
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.10"
 
 
 [tool.poetry.group.dev.dependencies]

@@ -3,7 +3,7 @@ from hashlib import sha1
 from typing import Optional
 
 
-def calcKeyId(key: Optional[bytes]) -> int:
+def calcKeyId(key: bytes | None) -> int:
     if not key:
         return 0
 
