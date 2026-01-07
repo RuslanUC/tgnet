@@ -1,13 +1,11 @@
 from __future__ import annotations
 from io import BytesIO
 from os import PathLike
-from typing import BinaryIO,Literal
+from typing import BinaryIO
 
 from tgnet import Headers, IP, AuthCredentials
 from tgnet.raw import TgnetSession, TgnetReader, Datacenter as RawDatacenter
 from tgnet.utils import make_auth_key_id
-
-AuthKeyType = Literal["perm", "temp", "media"]
 
 
 class Datacenter:
@@ -32,61 +30,39 @@ class Datacenter:
 
         return self._dc
 
-    def set_auth_key(self, key: bytes | None, type_: AuthKeyType = "perm") -> None:
-        """
-        Used to set the authentication key for the datacenter.
-
-        :param key: The authentication key to be set. It can be None to reset the key.
-        :param type_: The type of authentication key to be set. It can be one of the following:
-            "perm": Permanent (primary) key.
-            "temp": Temporary key (see https://core.telegram.org/api/pfs).
-            "media": Media temp key.
-        :return: None
-        """
-
+    def set_auth_key_perm(self, key: bytes | None) -> None:
         if key is not None and len(key) != 256:
             raise ValueError(f"Invalid auth key provided. Expected key of length 256.")
 
         auth = self._dc.auth
+        auth.auth_key_perm = key
+        auth.auth_key_perm_id = make_auth_key_id(key)
+        auth.authorized = key is not None
 
-        if type_ == "perm":
-            auth.auth_key_perm = key
-            auth.auth_key_perm_id = make_auth_key_id(key)
-            auth.authorized = key is not None
-        elif type_ == "temp":
-            auth.auth_key_temp = key
-            auth.auth_key_temp_id = make_auth_key_id(key)
-        elif type_ == "media":
-            auth.auth_key_media_temp = key
-            auth.auth_key_media_temp_id = make_auth_key_id(key)
-        else:
-            raise ValueError(
-                f"Invalid auth key type provided. Expected one of (\"perm\", \"temp\", \"media\"), got {type_}."
-            )
-
-    def get_auth_key(self, type_: AuthKeyType) -> bytes | None:
-        """
-        Used to set the authentication key for the datacenter.
-
-        :param type_: The type of authentication key to get. It can be one of the following:
-            "perm": Permanent (primary) key.
-            "temp": Temporary key (see https://core.telegram.org/api/pfs).
-            "media": Media temp key.
-        :return: Auth key of the provided type if set, otherwise None
-        """
+    def set_auth_key_temp(self, key: bytes | None) -> None:
+        if key is not None and len(key) != 256:
+            raise ValueError(f"Invalid auth key provided. Expected key of length 256.")
 
         auth = self._dc.auth
+        auth.auth_key_temp = key
+        auth.auth_key_temp_id = make_auth_key_id(key)
 
-        if type_ == "perm":
-            return auth.auth_key_perm
-        elif type_ == "temp":
-            return auth.auth_key_temp
-        elif type_ == "media":
-            return auth.auth_key_media_temp
-        else:
-            raise ValueError(
-                f"Invalid auth key type provided. Expected one of (\"perm\", \"temp\", \"media\"), got {type_}."
-            )
+    def set_auth_key_media_temp(self, key: bytes | None) -> None:
+        if key is not None and len(key) != 256:
+            raise ValueError(f"Invalid auth key provided. Expected key of length 256.")
+
+        auth = self._dc.auth
+        auth.auth_key_media_temp = key
+        auth.auth_key_media_temp_id = make_auth_key_id(key)
+
+    def get_auth_key_perm(self) -> bytes | None:
+        return self._dc.auth.auth_key_perm
+
+    def get_auth_key_temp(self) -> bytes | None:
+        return self._dc.auth.auth_key_temp
+
+    def get_auth_key_media_temp(self) -> bytes | None:
+        return self._dc.auth.auth_key_media_temp
 
     def reset(self) -> None:
         """
@@ -97,16 +73,16 @@ class Datacenter:
 
         auth = self._dc.auth
 
-        auth.authKeyPerm = None
-        auth.authKeyPermId = 0
-        auth.authKeyTemp = None
-        auth.authKeyTempId = 0
-        auth.authKeyMediaTemp = None
-        auth.authKeyMediaTempId = 0
+        auth.auth_key_perm = None
+        auth.auth_key_perm_id = 0
+        auth.auth_key_temp = None
+        auth.auth_key_temp_id = 0
+        auth.auth_key_media_temp = None
+        auth.auth_key_media_temp_id = 0
         auth.authorized = False
 
         self._dc.salt = []
-        self._dc.saltMedia = []
+        self._dc.salt_media = []
 
 
 class Tgnet:
@@ -149,8 +125,7 @@ class Tgnet:
 
         return self._datacenters[dc - 1]
 
-    @property
-    def current_datacenter(self) -> Datacenter | None:
+    def get_current_datacenter(self) -> Datacenter | None:
         """
         Retrieves the current datacenter.
 
@@ -163,37 +138,82 @@ class Tgnet:
 
         return self.get_datacenter(self._session.headers.current_datacenter_id)
 
-    @property
-    def auth_key(self) -> bytes | None:
+    def _get_dc(self, dc_id: int | None) -> Datacenter | None:
+        if dc_id is None:
+            return self.get_current_datacenter()
+        else:
+            return self.get_datacenter(dc_id)
+
+    def set_auth_key_perm(self, dc_id: int | None, key: bytes | None) -> None:
         """
-        Retrieves the auth key for the current datacenter.
+        Sets the perm authentication key for the datacenter.
 
-        :return: Auth key if the current datacenter is set and an auth key is set in it, otherwise None
-        """
-
-        if not (dc := self.current_datacenter):
-            return None
-        return dc.get_auth_key("perm")
-
-    def set_auth_key(self, dc: int, key: bytes | None, type_: Literal["perm", "temp", "media"] = "perm") -> None:
-        """
-        Sets the authentication key for the datacenter.
-
-        :param dc: The id of the datacenter.
+        :param dc_id: The id of the datacenter. If None, then current dc is selected.
         :param key: The authentication key to be set. It can be None to reset the key.
-        :param type_: The type of authentication key to be set. It can be one of the following:
-            "perm": Permanent (primary) key.
-            "temp": Temporary key (see https://core.telegram.org/api/pfs).
-            "media": Media temp key.
         :return: None
         """
 
-        if (dc := self.get_datacenter(dc)) is None:
-            return
+        if (dc := self._get_dc(dc_id)) is not None:
+            dc.set_auth_key_perm(key)
 
-        dc.set_auth_key(key, type_)
+    def set_auth_key_temp(self, dc_id: int | None, key: bytes | None) -> None:
+        """
+        Sets the temp authentication key for the datacenter.
 
-    def set_current_dc(self, dc: int) -> None:
+        :param dc_id: The id of the datacenter. If None, then current dc is selected.
+        :param key: The authentication key to be set. It can be None to reset the key.
+        :return: None
+        """
+
+        if (dc := self._get_dc(dc_id)) is not None:
+            dc.set_auth_key_temp(key)
+
+    def set_auth_key_media_temp(self, dc_id: int | None, key: bytes | None) -> None:
+        """
+        Sets the media temp authentication key for the datacenter.
+
+        :param dc_id: The id of the datacenter. If None, then current dc is selected.
+        :param key: The authentication key to be set. It can be None to reset the key.
+        :return: None
+        """
+
+        if (dc := self._get_dc(dc_id)) is not None:
+            dc.set_auth_key_media_temp(key)
+
+    def get_auth_key_perm(self, dc_id: int | None = None) -> bytes | None:
+        """
+        Gets the perm authentication key for the datacenter.
+
+        :param dc_id: The id of the datacenter. If None, then current dc is selected.
+        :return: Auth key or None
+        """
+
+        if (dc := self._get_dc(dc_id)) is not None:
+            return dc.get_auth_key_perm()
+
+    def get_auth_key_temp(self, dc_id: int | None = None) -> bytes | None:
+        """
+        Gets the temp authentication key for the datacenter.
+
+        :param dc_id: The id of the datacenter. If None, then current dc is selected.
+        :return: Auth key or None
+        """
+
+        if (dc := self._get_dc(dc_id)) is not None:
+            return dc.get_auth_key_temp()
+
+    def get_auth_key_media_temp(self, dc_id: int | None = None) -> bytes | None:
+        """
+        Gets the media temp authentication key for the datacenter.
+
+        :param dc_id: The id of the datacenter. If None, then current dc is selected.
+        :return: Auth key or None
+        """
+
+        if (dc := self._get_dc(dc_id)) is not None:
+            return dc.get_auth_key_media_temp()
+
+    def set_current_datacenter_id(self, dc: int) -> None:
         """
         Sets current datacenter id.
 
@@ -204,7 +224,7 @@ class Tgnet:
         if self.get_datacenter(dc) is None:
             return
 
-        self._session.headers.currentDatacenterId = dc
+        self._session.headers.current_datacenter_id = dc
 
     def reset_dc(self, dc: int) -> None:
         """
@@ -232,14 +252,14 @@ class Tgnet:
 
         headers = self._session.headers
 
-        headers.currentDatacenterId = new_current_dc
-        headers.timeDifference = 0
-        headers.lastDcUpdateTime = 0
-        headers.pushSessionId = 0
-        headers.registeredForInternalPush = False
-        headers.lastServerTime = 0
-        headers.currentTime = 0
-        headers.sessionsToDestroy = []
+        headers.current_datacenter_id = new_current_dc
+        headers.time_difference = 0
+        headers.last_dc_update_time = 0
+        headers.push_session_id = 0
+        headers.registered_for_internal_push = False
+        headers.last_server_time = 0
+        headers.current_time = 0
+        headers.sessions_to_destroy = []
 
     def save(self, file: str | PathLike | BinaryIO) -> None:
         """

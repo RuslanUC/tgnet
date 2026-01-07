@@ -8,7 +8,7 @@ for dc_id in range(1, 6):
     dc = tgnet.get_datacenter(dc_id)
     if not dc:
         continue
-    if key := dc.get_auth_key("perm"):
+    if key := dc.get_auth_key_perm():
         print(key.hex())
-    if key := dc.get_auth_key("temp"):
+    if key := dc.get_auth_key_temp():
         print(key.hex())
