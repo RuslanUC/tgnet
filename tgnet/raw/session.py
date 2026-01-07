@@ -14,27 +14,30 @@ class TgnetSession:
 
     @classmethod
     def deserialize(cls, buffer: TgnetReader) -> TgnetSession:
-        buffer.readUint32()  # config size (file size minus 4), not used now
+        buffer.read_uint32()  # config size (file size minus 4), not used now
 
         headers = Headers.deserialize(buffer)
         datacenters = []
 
-        numOfDatacenters = buffer.readUint32()
+        numOfDatacenters = buffer.read_uint32()
         for i in range(numOfDatacenters):
             datacenters.append(Datacenter.deserialize(buffer))
 
-        return cls(headers, datacenters)
+        return cls(
+            headers=headers,
+            datacenters=datacenters,
+        )
 
     def serialize(self, buffer: TgnetReader) -> None:
         start_size = buffer.buffer.tell()
-        buffer.writeUint32(0)
+        buffer.write_uint32(0)
 
         self.headers.serialize(buffer)
-        buffer.writeUint32(len(self.datacenters))
+        buffer.write_uint32(len(self.datacenters))
 
         for dc in self.datacenters:
             dc.serialize(buffer)
 
         config_size = buffer.buffer.tell() - start_size
         buffer.buffer.seek(start_size)
-        buffer.writeUint32(config_size - 4)
+        buffer.write_uint32(config_size - 4)

@@ -10,74 +10,81 @@ from tgnet.raw.tgnet_reader import TgnetReader
 
 @dataclass
 class Datacenter:
-    currentVersion: int
-    datacenterId: int
-    lastInitVersion: int
-    lastInitMediaVersion: int | None
+    current_version: int
+    datacenter_id: int
+    last_init_version: int
+    last_init_media_version: int | None
 
     ips: list[list[IP]]
-    isCdnDatacenter: bool
+    is_cdn: bool
 
     auth: AuthCredentials
     salt: list[Salt]
-    saltMedia: list[Salt]
+    salt_media: list[Salt]
 
     @classmethod
     def deserialize(cls, buffer: TgnetReader) -> Datacenter:
-        currentVersion = buffer.readUint32()
-        datacenterId = buffer.readUint32()
+        current_version = buffer.read_uint32()
+        datacenter_id = buffer.read_uint32()
 
-        lastInitVersion = buffer.readUint32() if currentVersion >= 3 else None
-        lastInitMediaVersion = buffer.readUint32() if currentVersion >= 10 else None
+        last_init_version = buffer.read_uint32() if current_version >= 3 else None
+        last_init_media_version = buffer.read_uint32() if current_version >= 10 else None
 
         ips = [[], [], [], []]
-        for b in range(4 if currentVersion >= 5 else 1):
+        for b in range(4 if current_version >= 5 else 1):
             ip_array = ips[b]
 
-            ip_count = buffer.readUint32()
+            ip_count = buffer.read_uint32()
             for _ in range(ip_count):
-                ip_array.append(IP.deserialize(buffer, currentVersion))
+                ip_array.append(IP.deserialize(buffer, current_version))
 
-        isCdnDatacenter = buffer.readBool() if currentVersion >= 6 else None
+        is_cdn = buffer.read_bool() if current_version >= 6 else None
 
-        auth = AuthCredentials.deserialize(buffer, currentVersion)
+        auth = AuthCredentials.deserialize(buffer, current_version)
 
-        salt_count = buffer.readUint32()
+        salt_count = buffer.read_uint32()
         salt = [Salt.deserialize(buffer) for _ in range(salt_count)]
-        saltMedia = None
+        salt_media = None
 
-        if currentVersion >= 13:
-            salt_count = buffer.readUint32()
-            saltMedia = [Salt.deserialize(buffer) for _ in range(salt_count)]
+        if current_version >= 13:
+            salt_count = buffer.read_uint32()
+            salt_media = [Salt.deserialize(buffer) for _ in range(salt_count)]
 
         return cls(
-            currentVersion, datacenterId, lastInitVersion, lastInitMediaVersion, ips, isCdnDatacenter, auth,
-            salt, saltMedia,
+            current_version=current_version,
+            datacenter_id=datacenter_id,
+            last_init_version=last_init_version,
+            last_init_media_version=last_init_media_version,
+            ips=ips,
+            is_cdn=is_cdn,
+            auth=auth,
+            salt=salt,
+            salt_media=salt_media,
         )
 
     def serialize(self, buffer: TgnetReader) -> None:
-        buffer.writeUint32(self.currentVersion)
-        buffer.writeUint32(self.datacenterId)
-        if self.currentVersion >= 3:
-            buffer.writeUint32(self.lastInitVersion)
-        if self.currentVersion >= 10:
-            buffer.writeUint32(self.lastInitMediaVersion)
+        buffer.write_uint32(self.current_version)
+        buffer.write_uint32(self.datacenter_id)
+        if self.current_version >= 3:
+            buffer.write_uint32(self.last_init_version)
+        if self.current_version >= 10:
+            buffer.write_uint32(self.last_init_media_version)
 
-        for i in range(4 if self.currentVersion >= 5 else 1):
-            buffer.writeUint32(len(self.ips[i]))
+        for i in range(4 if self.current_version >= 5 else 1):
+            buffer.write_uint32(len(self.ips[i]))
             for ip in self.ips[i]:
-                ip.serialize(buffer, self.currentVersion)
+                ip.serialize(buffer, self.current_version)
 
-        if self.currentVersion >= 6:
-            buffer.writeBool(self.isCdnDatacenter)
+        if self.current_version >= 6:
+            buffer.write_bool(self.is_cdn)
 
-        self.auth.serialize(buffer, self.currentVersion)
+        self.auth.serialize(buffer, self.current_version)
 
-        buffer.writeUint32(len(self.salt))
+        buffer.write_uint32(len(self.salt))
         for salt in self.salt:
             salt.serialize(buffer)
 
-        if self.currentVersion >= 13:
-            buffer.writeUint32(len(self.saltMedia))
-            for salt in self.saltMedia:
+        if self.current_version >= 13:
+            buffer.write_uint32(len(self.salt_media))
+            for salt in self.salt_media:
                 salt.serialize(buffer)

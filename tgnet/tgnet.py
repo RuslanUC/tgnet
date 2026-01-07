@@ -4,14 +4,14 @@ from os import PathLike
 from typing import BinaryIO,Literal
 
 from tgnet import Headers, IP, AuthCredentials
-from tgnet.raw import TgnetSession, TgnetReader, Datacenter as LowDatacenter
-from tgnet.utils import calcKeyId
+from tgnet.raw import TgnetSession, TgnetReader, Datacenter as RawDatacenter
+from tgnet.utils import make_auth_key_id
 
 AuthKeyType = Literal["perm", "temp", "media"]
 
 
 class Datacenter:
-    def __init__(self, dc: LowDatacenter):
+    def __init__(self, dc: RawDatacenter):
         self._dc = dc
 
     @property
@@ -20,10 +20,10 @@ class Datacenter:
         :return: This datacenter id
         """
 
-        return self._dc.datacenterId
+        return self._dc.datacenter_id
 
     @property
-    def low_datacenter(self) -> LowDatacenter:
+    def raw_datacenter(self) -> RawDatacenter:
         """
         Underlying "low-level" datacenter object.
 
@@ -50,15 +50,15 @@ class Datacenter:
         auth = self._dc.auth
 
         if type_ == "perm":
-            auth.authKeyPerm = key
-            auth.authKeyPermId = calcKeyId(key)
+            auth.auth_key_perm = key
+            auth.auth_key_perm_id = make_auth_key_id(key)
             auth.authorized = key is not None
         elif type_ == "temp":
-            auth.authKeyTemp = key
-            auth.authKeyTempId = calcKeyId(key)
+            auth.auth_key_temp = key
+            auth.auth_key_temp_id = make_auth_key_id(key)
         elif type_ == "media":
-            auth.authKeyMediaTemp = key
-            auth.authKeyMediaTempId = calcKeyId(key)
+            auth.auth_key_media_temp = key
+            auth.auth_key_media_temp_id = make_auth_key_id(key)
         else:
             raise ValueError(
                 f"Invalid auth key type provided. Expected one of (\"perm\", \"temp\", \"media\"), got {type_}."
@@ -78,11 +78,11 @@ class Datacenter:
         auth = self._dc.auth
 
         if type_ == "perm":
-            return auth.authKeyPerm
+            return auth.auth_key_perm
         elif type_ == "temp":
-            return auth.authKeyTemp
+            return auth.auth_key_temp
         elif type_ == "media":
-            return auth.authKeyMediaTemp
+            return auth.auth_key_media_temp
         else:
             raise ValueError(
                 f"Invalid auth key type provided. Expected one of (\"perm\", \"temp\", \"media\"), got {type_}."
@@ -158,10 +158,10 @@ class Tgnet:
         """
 
         if (self._session.headers is None or not self._session.headers.full or not self._session.datacenters or
-                self._session.headers.currentDatacenterId == 0):
+                self._session.headers.current_datacenter_id == 0):
             return None
 
-        return self.get_datacenter(self._session.headers.currentDatacenterId)
+        return self.get_datacenter(self._session.headers.current_datacenter_id)
 
     @property
     def auth_key(self) -> bytes | None:
@@ -265,27 +265,27 @@ class Tgnet:
         :return: An instance of Tgnet with default settings.
         """
 
-        def _dc(id_: int, ips: list[list[IP]]) -> LowDatacenter:
+        def _dc(id_: int, ips: list[list[IP]]) -> RawDatacenter:
             while len(ips) < 4:
                 ips.append([])
-            return LowDatacenter(
-                currentVersion=13,
-                datacenterId=id_,
-                lastInitVersion=725,
-                lastInitMediaVersion=725,
+            return RawDatacenter(
+                current_version=13,
+                datacenter_id=id_,
+                last_init_version=725,
+                last_init_media_version=725,
                 ips=ips,
-                isCdnDatacenter=False,
+                is_cdn=False,
                 auth=AuthCredentials(
-                    authKeyPerm=None,
-                    authKeyPermId=0,
-                    authKeyTemp=None,
-                    authKeyTempId=0,
-                    authKeyMediaTemp=None,
-                    authKeyMediaTempId=0,
+                    auth_key_perm=None,
+                    auth_key_perm_id=0,
+                    auth_key_temp=None,
+                    auth_key_temp_id=0,
+                    auth_key_media_temp=None,
+                    auth_key_media_temp_id=0,
                     authorized=0,
                 ),
                 salt=[],
-                saltMedia=[],
+                salt_media=[],
             )
 
         def _ip(address: str, flags: int) -> IP:
@@ -294,18 +294,18 @@ class Tgnet:
         session = TgnetSession(
             headers=Headers(
                 version=5,
-                testBackend=False,
-                clientBlocked=False,
-                lastInitSystemLangCode="en-us",
+                test_backend=False,
+                client_blocked=False,
+                last_init_system_lang_code="en-us",
                 full=True,
-                currentDatacenterId=0,
-                timeDifference=0,
-                lastDcUpdateTime=0,
-                pushSessionId=0,
-                registeredForInternalPush=False,
-                lastServerTime=0,
-                currentTime=0,
-                sessionsToDestroy=[],
+                current_datacenter_id=0,
+                time_difference=0,
+                last_dc_update_time=0,
+                push_session_id=0,
+                registered_for_internal_push=False,
+                last_server_time=0,
+                current_time=0,
+                sessions_to_destroy=[],
             ),
             datacenters=[
                 _dc(1, [

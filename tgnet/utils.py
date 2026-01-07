@@ -1,9 +1,8 @@
 import struct
 from hashlib import sha1
-from typing import Optional
 
 
-def calcKeyId(key: bytes | None) -> int:
+def make_auth_key_id(key: bytes | None) -> int:
     if not key:
         return 0
 

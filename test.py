@@ -17,7 +17,7 @@ def test_headers():
     to_deserialize = BytesIO(to_serialize.getvalue())
     buf = TgnetReader(to_deserialize)
     deserialized_headers = Headers.deserialize(buf)
-    deserialized_headers.currentTime = headers.currentTime
+    deserialized_headers.current_time = headers.current_time
     assert deserialized_headers == headers
 
     return headers
@@ -94,5 +94,5 @@ def test_session():
     to_deserialize = BytesIO(to_serialize.getvalue())
     buf = TgnetReader(to_deserialize)
     deserialized_sess = TgnetSession.deserialize(buf)
-    deserialized_sess.headers.currentTime = h.currentTime
+    deserialized_sess.headers.current_time = h.current_time
     assert deserialized_sess == sess

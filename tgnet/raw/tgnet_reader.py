@@ -8,67 +8,67 @@ class TgnetReader:
     def __init__(self, bytes_: bytes | bytearray | str | PathLike | BinaryIO):
         self.buffer = BytesIO(bytes_) if isinstance(bytes_, (bytes, bytearray)) else bytes_
 
-    def writeByteArray(self, b: bytes) -> None:
+    def _write_raw_bytes(self, b: bytes) -> None:
         self.buffer.write(b)
 
-    def writeInt32(self, x: int) -> None:
-        self.writeByteArray(struct.pack("<i", x))
+    def write_int32(self, x: int) -> None:
+        self._write_raw_bytes(struct.pack("<i", x))
 
-    def writeInt64(self, x: int) -> None:
-        self.writeByteArray(struct.pack("q", x))
+    def write_int64(self, x: int) -> None:
+        self._write_raw_bytes(struct.pack("q", x))
 
-    def writeBool(self, value: bool) -> None:
-        constructor = bytearray(b'\xb5ur\x99') if value else bytearray(b'7\x97y\xbc')
-        self.writeByteArray(constructor)
+    def write_bool(self, value: bool) -> None:
+        constructor = bytearray(b"\xb5ur\x99") if value else bytearray(b"7\x97y\xbc")
+        self._write_raw_bytes(constructor)
 
-    def writeBytes(self, b: bytes) -> None:
-        self.writeByteArray(b)
+    def write_raw_bytes(self, b: bytes) -> None:
+        self._write_raw_bytes(b)
 
-    def writeByte(self, i: int) -> None:
-        self.buffer.write(i.to_bytes(1, "big"))
+    def write_byte(self, i: int) -> None:
+        self.buffer.write(bytes([i]))
 
     def writeString(self, s: str) -> None:
         s = s.encode("utf-8")
         if len(s) <= 253:
-            self.writeByte(len(s))
+            self.write_byte(len(s))
         else:
-            self.writeByte(254)
-            self.writeByte(len(s) % 256)
-            self.writeByte(len(s) >> 8)
-            self.writeByte(len(s) >> 16)
+            self.write_byte(254)
+            self.write_byte(len(s) % 256)
+            self.write_byte(len(s) >> 8)
+            self.write_byte(len(s) >> 16)
 
-        self.writeByteArray(s)
+        self._write_raw_bytes(s)
 
         padding = (len(s) + (1 if len(s) <= 253 else 4)) % 4
         if padding != 0:
             padding = 4 - padding
 
         for a in range(padding):
-            self.writeByte(0)
+            self.write_byte(0)
 
-    def writeUint32(self, x: int) -> None:
+    def write_uint32(self, x: int) -> None:
         value = struct.pack("<I", x)
-        self.writeByteArray(value)
+        self._write_raw_bytes(value)
 
-    def readInt32(self) -> int:
+    def read_int32(self) -> int:
         return struct.unpack_from("<i", self.buffer.read(4))[0]
 
-    def readUint32(self) -> int:
+    def read_uint32(self) -> int:
         return struct.unpack_from("<I", self.buffer.read(4))[0]
 
-    def readInt64(self) -> int:
+    def read_int64(self) -> int:
         return struct.unpack_from("q", self.buffer.read(8))[0]
 
-    def readBool(self) -> bool:
-        constructor = self.readBytes(4)
+    def read_bool(self) -> bool:
+        constructor = self.read_raw_bytes(4)
         # bytearray(b'\xb5ur\x99') for True
         # bytearray(b'7\x97y\xbc') for False
-        return constructor == bytearray(b'\xb5ur\x99')
+        return constructor == b"\xb5ur\x99"
 
-    def readBytes(self, length: int) -> bytes | None:
+    def read_raw_bytes(self, length: int) -> bytes | None:
         return self.buffer.read(length)
 
-    def readString(self) -> str:
+    def read_string(self) -> str:
         sl = 1
         length = self.buffer.read(1)[0]
 

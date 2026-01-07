@@ -9,77 +9,95 @@ from tgnet.raw.tgnet_reader import TgnetReader
 @dataclass
 class Headers:
     version: int
-    testBackend: bool
-    clientBlocked: bool
-    lastInitSystemLangCode: str
+    test_backend: bool
+    client_blocked: bool
+    last_init_system_lang_code: str
     full: bool
-    currentDatacenterId: int | None = None
-    timeDifference: int | None = None
-    lastDcUpdateTime: int | None = None
-    pushSessionId: int | None = None
-    registeredForInternalPush: bool | None = None
-    lastServerTime: int | None = None
-    currentTime: int | None = None
-    sessionsToDestroy: list[int] | None = None
+    current_datacenter_id: int | None = None
+    time_difference: int | None = None
+    last_dc_update_time: int | None = None
+    push_session_id: int | None = None
+    registered_for_internal_push: bool | None = None
+    last_server_time: int | None = None
+    current_time: int | None = None
+    sessions_to_destroy: list[int] | None = None
 
     @classmethod
     def deserialize(cls, buffer: TgnetReader) -> Headers:
-        version = buffer.readUint32()
+        version = buffer.read_uint32()
         if version > 99999:
             raise NotImplementedError(f"Deserializing this version of config ({version}) is not currently supported")
 
-        testBackend = buffer.readBool()
-        clientBlocked = buffer.readBool() if version >= 3 else None
-        lastInitSystemLangCode = buffer.readString() if version >= 4 else None
+        test_backend = buffer.read_bool()
+        client_blocked = buffer.read_bool() if version >= 3 else None
+        last_init_system_lang_code = buffer.read_string() if version >= 4 else None
 
-        full = buffer.readBool()
+        full = buffer.read_bool()
         if not full:
-            return cls(version, testBackend, clientBlocked, lastInitSystemLangCode, full)
+            return cls(
+                version=version,
+                test_backend=test_backend,
+                client_blocked=client_blocked,
+                last_init_system_lang_code=last_init_system_lang_code,
+                full=full,
+            )
 
-        currentDatacenterId = buffer.readUint32()
-        timeDifference = buffer.readInt32()
-        lastDcUpdateTime = buffer.readInt32()
-        pushSessionId = buffer.readInt64()
+        current_datacenter_id = buffer.read_uint32()
+        time_difference = buffer.read_int32()
+        last_dc_update_time = buffer.read_int32()
+        push_session_id = buffer.read_int64()
 
-        registeredForInternalPush = buffer.readBool() if version >= 2 else None
-        lastServerTime = None
-        currentTime = int(time())
+        registered_for_internal_push = buffer.read_bool() if version >= 2 else None
+        last_server_time = None
+        current_time = int(time())
         if version >= 5:
-            lastServerTime = buffer.readInt32()
-            if timeDifference < currentTime < lastServerTime:
-                timeDifference += (lastServerTime - currentTime)
+            last_server_time = buffer.read_int32()
+            if time_difference < current_time < last_server_time:
+                time_difference += (last_server_time - current_time)
 
-        sessionsToDestroy = []
-        count = buffer.readUint32()
+        sessions_to_destroy = []
+        count = buffer.read_uint32()
         for a in range(count):
-            sessionsToDestroy.append(buffer.readInt64())
+            sessions_to_destroy.append(buffer.read_int64())
 
-        return cls(version, testBackend, clientBlocked, lastInitSystemLangCode, full, currentDatacenterId,
-                   timeDifference, lastDcUpdateTime, pushSessionId, registeredForInternalPush, lastServerTime,
-                   currentTime, sessionsToDestroy)
+        return cls(
+            version=version,
+            test_backend=test_backend,
+            client_blocked=client_blocked,
+            last_init_system_lang_code=last_init_system_lang_code,
+            full=full,
+            current_datacenter_id=current_datacenter_id,
+            time_difference=time_difference,
+            last_dc_update_time=last_dc_update_time,
+            push_session_id=push_session_id,
+            registered_for_internal_push=registered_for_internal_push,
+            last_server_time=last_server_time,
+            current_time=current_time,
+            sessions_to_destroy=sessions_to_destroy,
+        )
 
     def serialize(self, buffer: TgnetReader) -> None:
-        buffer.writeUint32(self.version)
-        buffer.writeBool(self.testBackend)
+        buffer.write_uint32(self.version)
+        buffer.write_bool(self.test_backend)
         if self.version >= 3:
-            buffer.writeBool(self.clientBlocked)
+            buffer.write_bool(self.client_blocked)
         if self.version >= 4:
-            buffer.writeString(self.lastInitSystemLangCode)
+            buffer.writeString(self.last_init_system_lang_code)
 
-        buffer.writeBool(self.full)
+        buffer.write_bool(self.full)
         if not self.full:
             return
 
-        buffer.writeUint32(self.currentDatacenterId)
-        buffer.writeInt32(self.timeDifference)
-        buffer.writeInt32(self.lastDcUpdateTime)
-        buffer.writeInt64(self.pushSessionId)
+        buffer.write_uint32(self.current_datacenter_id)
+        buffer.write_int32(self.time_difference)
+        buffer.write_int32(self.last_dc_update_time)
+        buffer.write_int64(self.push_session_id)
 
         if self.version >= 2:
-            buffer.writeBool(self.registeredForInternalPush)
+            buffer.write_bool(self.registered_for_internal_push)
         if self.version >= 5:
-            buffer.writeInt32(self.lastServerTime)
+            buffer.write_int32(self.last_server_time)
 
-        buffer.writeUint32(len(self.sessionsToDestroy))
-        for i in self.sessionsToDestroy:
-            buffer.writeInt64(i)
+        buffer.write_uint32(len(self.sessions_to_destroy))
+        for i in self.sessions_to_destroy:
+            buffer.write_int64(i)
